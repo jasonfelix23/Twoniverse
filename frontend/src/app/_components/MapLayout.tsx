@@ -1,152 +1,37 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
 import mapLayout from "./../../../public/32_24_with_zoom.png";
-import redPlayerDown from "../../../public/neo_red_down.png";
-import redPlayerUp from "../../../public/neo_red_up.png";
-import redPlayerLeft from "../../../public/neo_red_left.png";
-import redPlayerRight from "../../../public/neo_red_right.png";
+
+import redPlayerDown from "../../../public/Red/neo_red_down.png";
+import redPlayerUp from "../../../public/Red/neo_red_up.png";
+import redPlayerLeft from "../../../public/Red/neo_red_left.png";
+import redPlayerRight from "../../../public/Red/neo_red_right.png";
+
+import bluePlayerDown from "../../../public/Blue/neo_blue_down.png";
+import bluePlayerUp from "../../../public/Blue/neo_blue_up.png";
+import bluePlayerLeft from "../../../public/Blue/neo_blue_left.png";
+import bluePlayerRight from "../../../public/Blue/neo_blue_right.png";
+
+import yellowPlayerDown from "../../../public/Yellow/neo_yellow_down.png";
+import yellowPlayerUp from "../../../public/Yellow/neo_yellow_up.png";
+import yellowPlayerLeft from "../../../public/Yellow/neo_yellow_left.png";
+import yellowPlayerRight from "../../../public/Yellow/neo_yellow_right.png";
+
+import { Player } from "../classes/Player";
+import { Boundary } from "../classes/Boundary";
 import { collisions } from "../utils/Collisions";
-
-class Player {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  images: {
-    down: HTMLImageElement;
-    up: HTMLImageElement;
-    left: HTMLImageElement;
-    right: HTMLImageElement;
-  };
-  hitbox: { width: number; height: number };
-  framewidth: number;
-  currentFrame: number;
-  elapsedFrames: number;
-  currentDirection: "down" | "up" | "left" | "right";
-  isMoving: boolean;
-
-  constructor(
-    x: number,
-    y: number,
-    images: {
-      down: HTMLImageElement;
-      up: HTMLImageElement;
-      left: HTMLImageElement;
-      right: HTMLImageElement;
-    }
-  ) {
-    this.x = x;
-    this.y = y;
-    this.framewidth = 32;
-    this.width = 64;
-    this.height = 60;
-    this.images = images;
-    this.hitbox = {
-      width: this.width * 0.25,
-      height: this.height * 0.25,
-    };
-    this.currentFrame = 0;
-    this.elapsedFrames = 0;
-    this.currentDirection = "down";
-    this.isMoving = false;
-  }
-
-  move(dx: number, dy: number) {
-    this.x += dx;
-    this.y += dy;
-    this.isMoving = dx !== 0 || dy !== 0;
-
-    // Update direction based on movement
-    if (dx > 0) this.currentDirection = "right";
-    else if (dx < 0) this.currentDirection = "left";
-    else if (dy > 0) this.currentDirection = "down";
-    else if (dy < 0) this.currentDirection = "up";
-
-    // Update animation frames
-    if (this.isMoving) {
-      this.elapsedFrames++;
-      if (this.elapsedFrames >= 10) {
-        // Adjust this value to control animation speed
-        this.elapsedFrames = 0;
-        this.currentFrame = (this.currentFrame + 1) % 3;
-      }
-    } else {
-      this.currentFrame = 0;
-      this.elapsedFrames = 0;
-    }
-  }
-
-  draw(ctx: CanvasRenderingContext2D, scale: number) {
-    const currentImage = this.images[this.currentDirection];
-
-    ctx.drawImage(
-      currentImage,
-      this.currentFrame * this.framewidth,
-      0,
-      this.framewidth,
-      currentImage.height,
-      this.x,
-      this.y,
-      this.width,
-      this.height
-    );
-
-    // Draw player name
-    ctx.save();
-    ctx.font = "14px Arial";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.textAlign = "center";
-
-    ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 1;
-
-    const nameY = this.y - 5;
-    ctx.fillText("Jason", this.x + this.width / 2, nameY);
-    ctx.restore();
-
-    // Debug hitbox
-    ctx.strokeStyle = "yellow";
-    ctx.strokeRect(
-      this.x + (this.width - this.hitbox.width) / 2,
-      this.y + (this.height - this.hitbox.height) / 2,
-      this.hitbox.width,
-      this.hitbox.height
-    );
-  }
-
-  getHitbox() {
-    return {
-      left: this.x + (this.width - this.hitbox.width) / 2,
-      right: this.x + (this.width + this.hitbox.width) / 2,
-      top: this.y + (this.height - this.hitbox.height) / 2,
-      bottom: this.y + (this.height + this.hitbox.height) / 2,
-    };
-  }
-}
-class Boundary {
-  position: { x: number; y: number };
-  width: number;
-  height: number;
-
-  constructor(x: number, y: number, tileSize: number) {
-    this.position = { x: x, y: y };
-    this.width = tileSize;
-    this.height = tileSize;
-  }
-}
+import { PlayerImages } from "../types/types";
 
 const MapLayout: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]); //checking
+  const [mainPlayer, setMainPlayer] = useState<Player | null>(null);
+  const [otherplayers, setOtherplayers] = useState<Player[]>([]);
   const [boundaries, setBoundaries] = useState<Boundary[]>([]);
   const [tileSize, setTileSize] = useState(16);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const zoomFactor = 2;
   const MOVEMENT_SPEED = 1;
   const MAP_WIDTH = 32;
   const MAP_HEIGHT = 24;
@@ -155,12 +40,14 @@ const MapLayout: React.FC = () => {
   const pressedKeys = useRef<Set<string>>(new Set());
   const lastKeyPressed = useRef<string | null>(null);
   const animationFrameId = useRef<number>();
-  const playerImagesRef = useRef<{
-    down: HTMLImageElement | null;
-    up: HTMLImageElement | null;
-    left: HTMLImageElement | null;
-    right: HTMLImageElement | null;
-  }>({
+  const mainPlayerImagesRef = useRef<PlayerImages>({
+    down: null,
+    up: null,
+    left: null,
+    right: null,
+  });
+
+  const yellowPlayerImagesRef = useRef<PlayerImages>({
     down: null,
     up: null,
     left: null,
@@ -185,7 +72,6 @@ const MapLayout: React.FC = () => {
 
       const scaledTileSize = canvasWidth / MAP_WIDTH;
       setTileSize(scaledTileSize);
-
       createBoundaries(scaledTileSize);
     }
   };
@@ -208,14 +94,6 @@ const MapLayout: React.FC = () => {
     }
   };
 
-  const drawPlayers = () => {
-    if (ctxRef.current) {
-      players.forEach((player) => {
-        player.draw(ctxRef.current!, zoomFactor);
-      });
-    }
-  };
-
   const draw = () => {
     if (!ctxRef.current || !canvasRef.current) return;
 
@@ -227,8 +105,15 @@ const MapLayout: React.FC = () => {
     );
 
     drawImage();
-    drawCollisionTiles();
-    drawPlayers();
+    // drawCollisionTiles();
+
+    otherplayers.forEach((p) => {
+      p.draw(ctxRef.current!, false);
+    });
+
+    if (mainPlayer) {
+      mainPlayer.draw(ctxRef.current!, true);
+    }
   };
 
   useEffect(() => {
@@ -259,18 +144,12 @@ const MapLayout: React.FC = () => {
   const updatePlayerPositionAndSize = () => {
     if (canvasRef.current) {
       const scaleFactor = canvasRef.current.width / (MAP_WIDTH * 8);
-      setPlayers((prevPlayers) =>
-        prevPlayers.map((player) => {
-          const newPlayer = new Player(player.x, player.y, player.images);
-          newPlayer.width = 64 * scaleFactor;
-          newPlayer.height = 60 * scaleFactor;
-          newPlayer.hitbox = {
-            width: newPlayer.width * 0.5,
-            height: newPlayer.height * 0.5,
-          };
-          return newPlayer;
-        })
-      );
+      if (mainPlayer) {
+        mainPlayer.updateDimensions(scaleFactor);
+      }
+      otherplayers.forEach((player) => {
+        player.updateDimensions(scaleFactor);
+      });
     }
   };
 
@@ -330,8 +209,7 @@ const MapLayout: React.FC = () => {
   };
 
   const updateMovement = () => {
-    if (lastKeyPressed.current && players.length > 0) {
-      const currentPlayer = players[0];
+    if (lastKeyPressed.current && mainPlayer) {
       let dx = 0;
       let dy = 0;
 
@@ -350,20 +228,22 @@ const MapLayout: React.FC = () => {
           break;
       }
 
-      const newX = currentPlayer.x + dx;
-      const newY = currentPlayer.y + dy;
-
-      // Create a temporary player object to check collision
-      const tempPlayer = new Player(newX, newY, currentPlayer.images);
-      tempPlayer.width = currentPlayer.width;
-      tempPlayer.height = currentPlayer.height;
-      tempPlayer.hitbox = currentPlayer.hitbox;
+      const tempPlayer = new Player(
+        mainPlayer.id,
+        mainPlayer.x + dx,
+        mainPlayer.y + dy,
+        mainPlayer.images,
+        mainPlayer.name
+      );
 
       if (!checkCollision(tempPlayer)) {
-        setPlayers((prevPlayers) => {
-          const updatedPlayers = [...prevPlayers];
-          updatedPlayers[0].move(dx, dy);
-          return updatedPlayers;
+        setMainPlayer((prevPlayer) => {
+          if (prevPlayer) {
+            prevPlayer.move(dx, dy);
+            // Here you would emit the player's new state via websocket
+            return prevPlayer;
+          }
+          return null;
         });
       }
     }
@@ -405,42 +285,80 @@ const MapLayout: React.FC = () => {
       imageRef.current.src = mapLayout.src;
 
       // Load all player images
-      playerImagesRef.current.down = new Image();
-      playerImagesRef.current.up = new Image();
-      playerImagesRef.current.left = new Image();
-      playerImagesRef.current.right = new Image();
+      mainPlayerImagesRef.current.down = new Image();
+      mainPlayerImagesRef.current.up = new Image();
+      mainPlayerImagesRef.current.left = new Image();
+      mainPlayerImagesRef.current.right = new Image();
 
-      playerImagesRef.current.down.src = redPlayerDown.src;
-      playerImagesRef.current.up.src = redPlayerUp.src;
-      playerImagesRef.current.left.src = redPlayerLeft.src;
-      playerImagesRef.current.right.src = redPlayerRight.src;
+      mainPlayerImagesRef.current.down.src = bluePlayerDown.src;
+      mainPlayerImagesRef.current.up.src = bluePlayerUp.src;
+      mainPlayerImagesRef.current.left.src = bluePlayerLeft.src;
+      mainPlayerImagesRef.current.right.src = bluePlayerRight.src;
+
+      yellowPlayerImagesRef.current.down = new Image();
+      yellowPlayerImagesRef.current.up = new Image();
+      yellowPlayerImagesRef.current.left = new Image();
+      yellowPlayerImagesRef.current.right = new Image();
+
+      yellowPlayerImagesRef.current.down.src = yellowPlayerDown.src;
+      yellowPlayerImagesRef.current.up.src = yellowPlayerUp.src;
+      yellowPlayerImagesRef.current.left.src = yellowPlayerLeft.src;
+      yellowPlayerImagesRef.current.right.src = yellowPlayerRight.src;
 
       Promise.all([
+        // Main player image loading promises
         new Promise<void>((resolve) => {
           imageRef.current!.onload = () => resolve();
         }),
         new Promise<void>((resolve) => {
-          playerImagesRef.current.down!.onload = () => resolve();
+          mainPlayerImagesRef.current.down!.onload = () => resolve();
         }),
         new Promise<void>((resolve) => {
-          playerImagesRef.current.up!.onload = () => resolve();
+          mainPlayerImagesRef.current.up!.onload = () => resolve();
         }),
         new Promise<void>((resolve) => {
-          playerImagesRef.current.left!.onload = () => resolve();
+          mainPlayerImagesRef.current.left!.onload = () => resolve();
         }),
         new Promise<void>((resolve) => {
-          playerImagesRef.current.right!.onload = () => resolve();
+          mainPlayerImagesRef.current.right!.onload = () => resolve();
+        }),
+        // Yellow player image loading promises
+        new Promise<void>((resolve) => {
+          yellowPlayerImagesRef.current.down!.onload = () => resolve();
+        }),
+        new Promise<void>((resolve) => {
+          yellowPlayerImagesRef.current.up!.onload = () => resolve();
+        }),
+        new Promise<void>((resolve) => {
+          yellowPlayerImagesRef.current.left!.onload = () => resolve();
+        }),
+        new Promise<void>((resolve) => {
+          yellowPlayerImagesRef.current.right!.onload = () => resolve();
         }),
       ]).then(() => {
-        const initialPlayerX = canvasRef.current!.width / 2;
-        const initialPlayerY = canvasRef.current!.height / 2;
-        const player = new Player(initialPlayerX, initialPlayerY, {
-          down: playerImagesRef.current.down!,
-          up: playerImagesRef.current.up!,
-          left: playerImagesRef.current.left!,
-          right: playerImagesRef.current.right!,
-        });
-        setPlayers([player]);
+        const initialX = canvasRef.current!.width / 2;
+        const initialY = canvasRef.current!.height / 2;
+
+        // Create main player
+        const mainPlayer = new Player(
+          "main-player",
+          initialX,
+          initialY,
+          mainPlayerImagesRef.current as Required<PlayerImages>,
+          "You"
+        );
+
+        // Create player2 player
+        const player2Player = new Player(
+          "player2",
+          initialX - 50,
+          initialY - 50,
+          yellowPlayerImagesRef.current as Required<PlayerImages>,
+          "player2"
+        );
+
+        setMainPlayer(mainPlayer);
+        setOtherplayers([player2Player]);
         setIsInitialized(true);
         draw();
       });
@@ -448,7 +366,7 @@ const MapLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isInitialized && players.length > 0) {
+    if (isInitialized && mainPlayer) {
       animationFrameId.current = requestAnimationFrame(updateMovement);
 
       return () => {
@@ -457,7 +375,7 @@ const MapLayout: React.FC = () => {
         }
       };
     }
-  }, [isInitialized, players.length]);
+  }, [isInitialized, mainPlayer, otherplayers]);
 
   return <canvas ref={canvasRef} className="flex-1"></canvas>;
 };
