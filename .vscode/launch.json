@@ -1,0 +1,14 @@
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Spring Boot-TwoniverseBackendApplication<twoniverse>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.twoniverse.twoniverse.TwoniverseBackendApplication",
+      "projectName": "twoniverse",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}
