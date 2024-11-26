@@ -24,7 +24,7 @@ public class Room {
     private List<String> invites;
 
     @ManyToOne
-    private User owner;
+    private Person owner;
 
     @Column(nullable = false)
     private LocalDateTime creationTime;
