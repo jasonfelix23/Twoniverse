@@ -1,10 +1,34 @@
-import React from "react";
+"use client";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import logo from "@/../public/twoniverse-high-resolution-logo-transparent.png";
+import { apiService, apiUtils } from "../utils/apiUtils";
+import { LoginResponse } from "../types/types";
 
 const Login = () => {
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  async function login_api(username: string, password: string) {
+    try {
+      console.log(apiUtils.loginUrl);
+      const response = await apiService.post<LoginResponse>(
+        apiUtils.loginUrl(),
+        { username, password }
+      );
+      console.log(response);
+      const token = response.token;
+
+      apiService.setToken(token);
+      localStorage.setItem("AuthToken", token);
+
+      console.log("Login Successful");
+    } catch (e) {
+      console.error("Login failed:-----", e);
+    }
+  }
+
   return (
     <div className="flex flex-col md:flex-row h-screen">
       {/* Login Container */}
@@ -20,16 +44,24 @@ const Login = () => {
           <h1 className="text-3xl font-bold mb-6 text-center">Login</h1>
           <form>
             <input
-              type="email"
-              placeholder="Email"
+              type="text"
+              placeholder="Username"
               className="w-full border border-gray-300 rounded-lg p-3 mb-4"
+              onChange={(e) => setName(e.target.value)}
             />
             <input
               type="password"
               placeholder="Password"
               className="w-full border border-gray-300 rounded-lg p-3 mb-4"
+              onChange={(e) => setPassword(e.target.value)}
             />
-            <Button className="w-full bg-greendark1 text-white py-3 rounded-lg font-bold hover:bg-greendark0">
+            <Button
+              className="w-full bg-greendark1 text-white py-3 rounded-lg font-bold hover:bg-greendark0"
+              onClick={(e) => {
+                e.preventDefault();
+                login_api(name, password);
+              }}
+            >
               Login
             </Button>
             <p className="text-xs text-gray-500 text-center mt-2">

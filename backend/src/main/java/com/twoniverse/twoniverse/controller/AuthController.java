@@ -1,11 +1,11 @@
 package com.twoniverse.twoniverse.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.twoniverse.twoniverse.dto.LoginRequest;
-import com.twoniverse.twoniverse.dto.LoginResponse;
 import com.twoniverse.twoniverse.dto.SignupRequest;
 import com.twoniverse.twoniverse.service.AuthService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,12 +19,13 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        System.out.println(request.getUsername()+"@@@@@@@@@@@@@@@@@@@@@@@@@");
         return authService.login(request);
     }
 
     @PostMapping("/signup")
-    public LoginResponse postMethodName(@RequestBody SignupRequest request) {
+    public ResponseEntity<?> postMethodName(@RequestBody SignupRequest request) {
         return authService.signup(request);
     }
     

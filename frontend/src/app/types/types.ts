@@ -21,3 +21,7 @@ export type PlayerState = {
   name: string;
   inProximity: boolean;
 };
+
+export interface LoginResponse {
+  token: string;
+}
